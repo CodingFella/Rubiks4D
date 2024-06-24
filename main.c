@@ -378,7 +378,11 @@ uint32_t shade(uint32_t color, int percent_change) {
 
 
 void draw_cube(uint32_t *canvas, int width, int height, cube *curr_cube, Point_3D *points, uint32_t color,
-               Point_3D camera, int mouseX, int mouseY, int cube_index) {
+               Point_3D camera, int mouseX, int mouseY, int cube_index, int num_cubes) {
+    if(curr_cube->id >= num_cubes - CUBES) {
+        return;
+    }
+
     Point_2D c_2D[NUM_CORNERS];
 
     convert_3D_to_2D(c_2D, width, height, points, camera);
@@ -451,7 +455,6 @@ void process_key(int input) {
 }
 
 void change_center(cube *cubes, int *cube_order) {
-    // brute force first one, and try to optimize for rest
     int i;
     cube temp_cubes[CUBES];
     int count = 0;
@@ -492,38 +495,18 @@ void rotate_edge(cube *cubes, int select) {
 
 }
 
-void rotate_center(cube *cubes, int select, int order) {
+void rotate_center(cube *cubes, int select, int order, int **anchors) {
 
     // order is 4 digit: 3210
-
-    int side_1 = 1;
-    int side_2 = 4;
-    int side_3 = 6;
-    int side_4 = 2;
+    int side_1 = (order / 1000) % 10;
+    int side_2 = (order / 100) % 10;
+    int side_3 = (order / 10) % 10;
+    int side_4 = order % 10;
 
     int i, j, count;
-    cube temp_cubes[9];
-
-    int anchor_1[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
-    int anchor_2[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
-
-//    int anchor_3;
-    int anchor_3[4] = {3 * CUBES + 8, 3 * CUBES + 7, 3 * CUBES + 6, -3};
-
-
-    int anchor_4[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
-
-    // int anchor_5;
-    int anchor_5[4] = {5 * CUBES + 24, 5 * CUBES + 25, 5 * CUBES + 26, -3};
-
-    int anchor_6[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
-
-    int *anchors[7] = {NULL, anchor_1, anchor_2, anchor_3, anchor_4, anchor_5, anchor_6};
-
-
+    cube temp_cubes[DIMENSION * DIMENSION];
 
     count = 0;
-
     for(i = 0; i < DIMENSION; i++) {
         for(j = 0; j < DIMENSION; j++) {
             move_color(&temp_cubes[count], &cubes[anchors[side_1][i] + anchors[side_1][3] * j]);
@@ -564,38 +547,201 @@ void rotate_corner(cube *cubes, int select) {
 
 }
 
+void flip(int *to_reverse) {
+    // swap indexes 0 and 3; 1 and 2
+    int temp;
+
+    temp = to_reverse[0];
+    to_reverse[0] = to_reverse[3];
+    to_reverse[3] = temp;
+
+    temp = to_reverse[1];
+    to_reverse[1] = to_reverse[2];
+    to_reverse[2] = temp;
+}
+
+void rotate_self(cube *cubes, int cube_num, int corner_anchors[4], int edge_anchors[4], int increment, int reverse) {
+    // rotate corners
+    int i, j, count;
+    cube temp_cubes[DIMENSION];
+
+    int anchor_corners[5] = {cube_num * CUBES + corner_anchors[0], cube_num * CUBES + corner_anchors[1],
+                             cube_num * CUBES + corner_anchors[2], cube_num * CUBES + corner_anchors[3],
+                             increment};
+
+    int anchor_edges[5] = {cube_num * CUBES + edge_anchors[0], cube_num * CUBES + edge_anchors[1],
+                           cube_num * CUBES + edge_anchors[2], cube_num * CUBES + edge_anchors[3],
+                           increment};
+
+    if(reverse) {
+        flip(anchor_corners);
+        flip(anchor_edges);
+    }
+
+    count = 0;
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&temp_cubes[count], &cubes[anchor_corners[0] + anchor_corners[4] * i]);
+        count++;
+    }
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_corners[0] + anchor_corners[4] * i], &cubes[anchor_corners[1] + anchor_corners[4] * i]);
+    }
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_corners[1] + anchor_corners[4] * i], &cubes[anchor_corners[2] + anchor_corners[4] * i]);
+    }
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_corners[2] + anchor_corners[4] * i], &cubes[anchor_corners[3] + anchor_corners[4] * i]);
+    }
+    count = 0;
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_corners[3] + anchor_corners[4] * i], &temp_cubes[count]);
+        count++;
+    }
+
+
+    // rotate edges
+    count = 0;
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&temp_cubes[count], &cubes[anchor_edges[0] + anchor_edges[4] * i]);
+        count++;
+    }
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_edges[0] + anchor_edges[4] * i], &cubes[anchor_edges[1] + anchor_edges[4] * i]);
+    }
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_edges[1] + anchor_edges[4] * i], &cubes[anchor_edges[2] + anchor_edges[4] * i]);
+    }
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_edges[2] + anchor_edges[4] * i], &cubes[anchor_edges[3] + anchor_edges[4] * i]);
+    }
+    count = 0;
+    for(i = 0; i < DIMENSION; i++) {
+        move_color(&cubes[anchor_edges[3] + anchor_edges[4] * i], &temp_cubes[count]);
+        count++;
+    }
+
+}
+
 
 
 void rotate(cube *cubes, int select) {
     // 3 types: corner, edge, center. and core
+
+
 
     // core
     if(select == 13) {
         return;
     }
 
+    int corner_anchors_x[4] = {0, 6, 8, 2};
+    int edge_anchors_x[4] = {3, 7, 5, 1};
+    int increment_x = 9;
+
+    int corner_anchors_y[4] = {0, 2, 20, 18};
+    int edge_anchors_y[4] = {1, 11, 19, 9};
+    int increment_y = 3;
+
+    int corner_anchors_z[4] = {18, 24, 6, 0};
+    int edge_anchors_z[4] = {9, 21, 15, 3};
+    int increment_z = 1;
+
     if(select % 2 == 1) {
         rotate_edge(cubes, select);
     }
     else if(select == 4 || select == 10 || select == 12 || select == 14 || select == 16 || select == 22) {
-        int order;
+        int order = 0;
+
+
+
         switch(select) {
             case 4:
+                // about x
                 order = 1462;
+
+                int anchor_1_x[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
+                int anchor_4_x[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
+                int anchor_6_x[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
+                int anchor_2_x[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
+                int *anchors_x[7] = {NULL, anchor_1_x, anchor_2_x, NULL, anchor_4_x, NULL, anchor_6_x};
+
+                rotate_center(cubes, select, order, anchors_x);
+                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, 0); // correct
+                break;
             case 10:
-                order = 4325;
-            case 12:
-                order = 6315;
-            case 14:
-                order = 5136;
-            case 16:
+                // about y
                 order = 5234;
+
+                int anchor_5_y[4] = {5 * CUBES + 18, 5 * CUBES + 19, 5 * CUBES + 20, 3};
+                int anchor_2_y[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
+                int anchor_3_y[4] = {3 * CUBES + 2, 3 * CUBES + 1, 3 * CUBES + 0, 3};
+                int anchor_4_y[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
+                int *anchors_y[7] = {NULL, NULL, anchor_2_y, anchor_3_y, anchor_4_y, anchor_5_y, NULL};
+
+                rotate_center(cubes, select, order, anchors_y);
+
+                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, 0); // correct
+                break;
+            case 12:
+                // about z
+                order = 5136;
+
+                int anchor_5_z[4] = {5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 20, -1};
+                int anchor_1_z[4] = {1 * CUBES + 8, 1 * CUBES + 17, 1 * CUBES + 26, -1};
+                int anchor_3_z[4] = {3 * CUBES + 2, 3 * CUBES + 5, 3 * CUBES + 8, -1};
+                int anchor_6_z[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
+                int *anchors_z[7] = {NULL, anchor_1_z, NULL, anchor_3_z, NULL, anchor_5_z, anchor_6_z};
+
+                rotate_center(cubes, select, order, anchors_z);
+
+                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, 0); // correct
+                break;
+            case 14:
+                // about z
+                order = 6315;
+
+                int anchor_5_z_[4] = {5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 20, -1};
+                int anchor_1_z_[4] = {1 * CUBES + 8, 1 * CUBES + 17, 1 * CUBES + 26, -1};
+                int anchor_3_z_[4] = {3 * CUBES + 2, 3 * CUBES + 5, 3 * CUBES + 8, -1};
+                int anchor_6_z_[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
+                int *anchors_z_[7] = {NULL, anchor_1_z_, NULL, anchor_3_z_, NULL, anchor_5_z_, anchor_6_z_};
+
+                rotate_center(cubes, select, order, anchors_z_);
+
+                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, 1); // reverse
+                break;
+            case 16:
+                // about y
+                order = 4325;
+
+                int anchor_5_y_[4] = {5 * CUBES + 18, 5 * CUBES + 19, 5 * CUBES + 20, 3};
+                int anchor_2_y_[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
+                int anchor_3_y_[4] = {3 * CUBES + 2, 3 * CUBES + 1, 3 * CUBES + 0, 3};
+                int anchor_4_y_[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
+                int *anchors_y_[7] = {NULL, NULL, anchor_2_y_, anchor_3_y_, anchor_4_y_, anchor_5_y_, NULL};
+
+                rotate_center(cubes, select, order, anchors_y_);
+
+                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, 1); // reverse
+                break;
             case 22:
+                // about x
                 order = 2641;
+
+                int anchor_1_x_[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
+                int anchor_4_x_[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
+                int anchor_6_x_[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
+                int anchor_2_x_[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
+                int *anchors_x_[7] = {NULL, anchor_1_x_, anchor_2_x_, NULL, anchor_4_x_, NULL, anchor_6_x_};
+
+                rotate_center(cubes, select, order, anchors_x_);
+
+                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, 1); // reverse
+                break;
             default:
                 order = 0;
         }
-        rotate_center(cubes, select, order);
+
     }
     else {
         rotate_corner(cubes, select);
@@ -703,7 +849,7 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
 
 
     for(int i = 0; i < num_cubes; i++) {
-        draw_cube(pixels, WIDTH, HEIGHT, &translated_cubes[i], translated_cubes[i].points, translated_cubes[i].color, camera, x, y, i);
+        draw_cube(pixels, WIDTH, HEIGHT, &translated_cubes[i], translated_cubes[i].points, translated_cubes[i].color, camera, x, y, i, num_cubes);
     }
 
 

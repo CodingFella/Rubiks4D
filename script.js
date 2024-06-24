@@ -108,6 +108,11 @@ async function startDemo() {
         } else if (event.key === 'r') {
             to_rotate = 1;
             console.log("r");
+        } else if (event.key === '/') {
+            current_cube += 9;
+            if(current_cube > 26) {
+                current_cube = 26;
+            }
         }
         // console.log(current_input);
         render(instance);
