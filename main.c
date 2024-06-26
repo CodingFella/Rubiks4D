@@ -788,7 +788,137 @@ void rotate_edge(cube *cubes, int select, const int anchor_a[4], const int ancho
         }
     }
 
+}
 
+void rotate_center_piece(cube *cubes, int select) {
+    int order;
+    int bread;
+
+    // for rotate self
+    int corner_anchors_x[4] = {0, 6, 8, 2};
+    int edge_anchors_x[4] = {3, 7, 5, 1};
+    int increment_x = 9;
+
+    int corner_anchors_y[4] = {0, 2, 20, 18};
+    int edge_anchors_y[4] = {1, 11, 19, 9};
+    int increment_y = 3;
+
+    int corner_anchors_z[4] = {18, 24, 6, 0};
+    int edge_anchors_z[4] = {9, 21, 15, 3};
+    int increment_z = 1;
+
+    // for sandwich turns
+    int sandwich_1[8] = {1 * CUBES + 6, 1 * CUBES + 8, 1 * CUBES + 26, 1 * CUBES + 24, 1 * CUBES + 7, 1 * CUBES + 17, 1 * CUBES + 25, 1 * CUBES + 15};
+    int sandwich_2[8] = {2 * CUBES + 6, 2 * CUBES + 0, 2 * CUBES + 18, 2 * CUBES + 24, 2 * CUBES + 3, 2 * CUBES + 9, 2 * CUBES + 21, 2 * CUBES + 15};
+    int sandwich_3[8] = {3 * CUBES + 2, 3 * CUBES + 0, 3 * CUBES + 6, 3 * CUBES + 8, 3 * CUBES + 5, 3 * CUBES + 1, 3 * CUBES + 3, 3 * CUBES + 7};
+    int sandwich_4[8] = {4 * CUBES + 2, 4 * CUBES + 20, 4 * CUBES + 26, 4 * CUBES + 8, 4 * CUBES + 5, 4 * CUBES + 11, 4 * CUBES + 23, 4 * CUBES + 17};
+    int sandwich_5[8] = {5 * CUBES + 20, 5 * CUBES + 18, 5 * CUBES + 24, 5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 19, 5 * CUBES + 21, 5 * CUBES + 25};
+    int sandwich_6[8] = {6 * CUBES + 0, 6 * CUBES + 2, 6 * CUBES + 20, 6 * CUBES + 18, 6 * CUBES + 1, 6 * CUBES + 11, 6 * CUBES + 19, 6 * CUBES + 9};
+
+
+
+    switch(select) {
+        case 4:
+            // about x
+            order = 1462;
+            bread = 35;
+
+            int anchor_1_x[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
+            int anchor_4_x[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
+            int anchor_6_x[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
+            int anchor_2_x[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
+            int *anchors_x[7] = {NULL, anchor_1_x, anchor_2_x, NULL, anchor_4_x, NULL, anchor_6_x};
+
+            rotate_center(cubes, select, order, anchors_x);
+
+            rotate_sandwich(cubes, bread, sandwich_3, sandwich_5, !TO_REVERSE);
+
+            rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, !TO_REVERSE); // correct
+            break;
+        case 10:
+            // about y
+            order = 5234;
+            bread = 35;
+
+            int anchor_5_y[4] = {5 * CUBES + 18, 5 * CUBES + 19, 5 * CUBES + 20, 3};
+            int anchor_2_y[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
+            int anchor_3_y[4] = {3 * CUBES + 2, 3 * CUBES + 1, 3 * CUBES + 0, 3};
+            int anchor_4_y[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
+            int *anchors_y[7] = {NULL, NULL, anchor_2_y, anchor_3_y, anchor_4_y, anchor_5_y, NULL};
+
+            rotate_center(cubes, select, order, anchors_y);
+            rotate_sandwich(cubes, bread, sandwich_1, sandwich_6, !TO_REVERSE);
+            rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // correct
+
+            break;
+        case 12:
+            // about z
+            order = 5136;
+            bread = 0;
+
+            int anchor_5_z[4] = {5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 20, -1};
+            int anchor_1_z[4] = {1 * CUBES + 8, 1 * CUBES + 17, 1 * CUBES + 26, -1};
+            int anchor_3_z[4] = {3 * CUBES + 2, 3 * CUBES + 5, 3 * CUBES + 8, -1};
+            int anchor_6_z[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
+            int *anchors_z[7] = {NULL, anchor_1_z, NULL, anchor_3_z, NULL, anchor_5_z, anchor_6_z};
+
+            rotate_center(cubes, select, order, anchors_z);
+
+            rotate_sandwich(cubes, bread, sandwich_2, sandwich_4, !TO_REVERSE);
+
+            rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, !TO_REVERSE); // correct
+            break;
+        case 14:
+            // about z
+            order = 6315;
+
+            int anchor_5_z_[4] = {5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 20, -1};
+            int anchor_1_z_[4] = {1 * CUBES + 8, 1 * CUBES + 17, 1 * CUBES + 26, -1};
+            int anchor_3_z_[4] = {3 * CUBES + 2, 3 * CUBES + 5, 3 * CUBES + 8, -1};
+            int anchor_6_z_[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
+            int *anchors_z_[7] = {NULL, anchor_1_z_, NULL, anchor_3_z_, NULL, anchor_5_z_, anchor_6_z_};
+
+            rotate_center(cubes, select, order, anchors_z_);
+
+            rotate_sandwich(cubes, bread, sandwich_2, sandwich_4, TO_REVERSE);
+
+            rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, TO_REVERSE); // reverse
+            break;
+        case 16:
+            // about y
+            order = 4325;
+
+            int anchor_5_y_[4] = {5 * CUBES + 18, 5 * CUBES + 19, 5 * CUBES + 20, 3};
+            int anchor_2_y_[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
+            int anchor_3_y_[4] = {3 * CUBES + 2, 3 * CUBES + 1, 3 * CUBES + 0, 3};
+            int anchor_4_y_[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
+            int *anchors_y_[7] = {NULL, NULL, anchor_2_y_, anchor_3_y_, anchor_4_y_, anchor_5_y_, NULL};
+
+            rotate_center(cubes, select, order, anchors_y_);
+
+            rotate_sandwich(cubes, bread, sandwich_1, sandwich_6, TO_REVERSE);
+
+            rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, TO_REVERSE); // reverse
+            break;
+        case 22:
+            // about x
+            order = 2641;
+
+            int anchor_1_x_[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
+            int anchor_4_x_[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
+            int anchor_6_x_[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
+            int anchor_2_x_[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
+            int *anchors_x_[7] = {NULL, anchor_1_x_, anchor_2_x_, NULL, anchor_4_x_, NULL, anchor_6_x_};
+
+            rotate_center(cubes, select, order, anchors_x_);
+
+            rotate_sandwich(cubes, bread, sandwich_3, sandwich_5, TO_REVERSE);
+
+            rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, TO_REVERSE); // reverse
+            break;
+        default:
+            order = 0;
+    }
 }
 
 
@@ -817,256 +947,109 @@ void rotate(cube *cubes, int select) {
     int reverse = 1;
     // edge
     if(select % 2 == 1) {
-
-        int anchor_1[4] = {1 * CUBES + 6, 1 * CUBES + 15, 1 * CUBES + 24, 1};
-
-        int anchor_2[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
-        int anchor_2_rev_dec[4] = {2 * CUBES + 24, 2 * CUBES + 15, 2 * CUBES + 6, -3};
-
-        int anchor_3[4] = {3 * CUBES + 6, 3 * CUBES + 7, 3 * CUBES + 8, -3};
-        int anchor_3_rotated[4] = {3 * CUBES + 8, 3 * CUBES + 5, 3 * CUBES + 2, -1};
-
-        int anchor_4[4] = {4 * CUBES + 2, 4 * CUBES + 11, 4 * CUBES + 20, 3};
-        int anchor_4_rev_1[4] = {4 * CUBES + 26, 4 * CUBES + 23, 4 * CUBES + 20, -9};
-        int anchor_4_rev[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
-        int anchor_4_rotated[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
-
-
-        int anchor_5[4] = {5 * CUBES + 24, 5 * CUBES + 25, 5 * CUBES + 26, -3};
-        int anchor_5_rev_1[4] = {5 * CUBES + 24, 5 * CUBES + 21, 5 * CUBES + 18, 1};
-        int anchor_5_rev[4] = {5 * CUBES + 26, 5 * CUBES + 25, 5 * CUBES + 24, -3};
-        int anchor_5_dec_1[4] = {5 * CUBES + 20, 5 * CUBES + 23, 5 * CUBES + 26, -1};
-
-        int anchor_6[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
-        int anchor_6_rev[4] = {6 * CUBES + 2, 6 * CUBES + 1, 6 * CUBES + 0, 9};
-        int anchor_6_rev_dec[4] = {6 * CUBES + 20, 6 * CUBES + 19, 6 * CUBES + 18, -9};
-        int anchor_6_add_1[4] = {6 * CUBES + 18, 6 * CUBES + 9, 6 * CUBES + 0, 1};
-        int anchor_6_rev_dec_1[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
-
-
         switch(select) {
             case 3:
             case 23:
-                // opposites
-                rotate_edge(cubes, select, anchor_1, anchor_6);
-                // neighbors
-                rotate_edge(cubes, select, anchor_2, anchor_3);
-                rotate_edge(cubes, select, anchor_4, anchor_5);
-
-                // rotate self
-                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, !TO_REVERSE); // 4
-                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, !TO_REVERSE); // 4
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-
+                rotate_center_piece(cubes, 10);
+                rotate_center_piece(cubes, 12);
+                rotate_center_piece(cubes, 12);
                 break;
+
             case 5:
             case 21:
-                // opp
-                rotate_edge(cubes, select, anchor_1, anchor_6_rev_dec);
-
-                // neighbors
-                rotate_edge(cubes, select, anchor_2, anchor_5_rev);
-                rotate_edge(cubes, select, anchor_3, anchor_4_rev);
-
-                // rotate self too
-                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, !TO_REVERSE); // 12
-                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, !TO_REVERSE); // 12
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-
+                rotate_center_piece(cubes, 10);
+                rotate_center_piece(cubes, 4);
+                rotate_center_piece(cubes, 4);
                 break;
 
             case 9:
             case 17:
-                // opposites
-                rotate_edge(cubes, select, anchor_3, anchor_5_dec_1);
-
-                // neighbors
-                rotate_edge(cubes, select, anchor_1, anchor_4_rev);
-                rotate_edge(cubes, select, anchor_2, anchor_6_add_1);
-
-                // self
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, TO_REVERSE); // 22
-
+                rotate_center_piece(cubes, 4);
+                rotate_center_piece(cubes, 10);
+                rotate_center_piece(cubes, 10);
                 break;
 
             case 11:
             case 15:
-                // opposites
-                rotate_edge(cubes, select, anchor_3, anchor_5_rev_1);
-
-                // neighbors
-                rotate_edge(cubes, select, anchor_1, anchor_2_rev_dec);
-                rotate_edge(cubes, select, anchor_4, anchor_6_rev_dec_1);
-
-                // self
-                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, TO_REVERSE); // 22
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
+                rotate_center_piece(cubes, 4);
+                rotate_center_piece(cubes, 12);
+                rotate_center_piece(cubes, 12);
                 break;
 
             case 1:
             case 25:
-                // opposites
-                rotate_edge(cubes, select, anchor_2, anchor_4_rotated);
-
-                // neighbors
-                rotate_edge(cubes, select, anchor_1, anchor_5_dec_1);
-                rotate_edge(cubes, select, anchor_3, anchor_6_rev_dec);
-
-                // self
-                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, TO_REVERSE); // 14
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-
+                rotate_center_piece(cubes, 12);
+                rotate_center_piece(cubes, 4);
+                rotate_center_piece(cubes, 4);
 
                 break;
 
             case 7:
             case 19:
-                // opposites
-                rotate_edge(cubes, select, anchor_2, anchor_4_rev_1);
-
-                // neighbors
-                rotate_edge(cubes, select, anchor_1, anchor_3_rotated);
-                rotate_edge(cubes, select, anchor_5, anchor_6_rev);
-
-
-                // self
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // 10
-                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, TO_REVERSE); // 14
+                rotate_center_piece(cubes, 12);
+                rotate_center_piece(cubes, 10);
+                rotate_center_piece(cubes, 10);
 
                 break;
 
+            default:
+                break;
         }
     }
     // center
     else if(select == 4 || select == 10 || select == 12 || select == 14 || select == 16 || select == 22) {
-        int order;
-        int bread;
-
-
-
-        // for sandwich turns
-        int sandwich_1[8] = {1 * CUBES + 6, 1 * CUBES + 8, 1 * CUBES + 26, 1 * CUBES + 24, 1 * CUBES + 7, 1 * CUBES + 17, 1 * CUBES + 25, 1 * CUBES + 15};
-        int sandwich_2[8] = {2 * CUBES + 6, 2 * CUBES + 0, 2 * CUBES + 18, 2 * CUBES + 24, 2 * CUBES + 3, 2 * CUBES + 9, 2 * CUBES + 21, 2 * CUBES + 15};
-        int sandwich_3[8] = {3 * CUBES + 2, 3 * CUBES + 0, 3 * CUBES + 6, 3 * CUBES + 8, 3 * CUBES + 5, 3 * CUBES + 1, 3 * CUBES + 3, 3 * CUBES + 7};
-        int sandwich_4[8] = {4 * CUBES + 2, 4 * CUBES + 20, 4 * CUBES + 26, 4 * CUBES + 8, 4 * CUBES + 5, 4 * CUBES + 11, 4 * CUBES + 23, 4 * CUBES + 17};
-        int sandwich_5[8] = {5 * CUBES + 20, 5 * CUBES + 18, 5 * CUBES + 24, 5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 19, 5 * CUBES + 21, 5 * CUBES + 25};
-        int sandwich_6[8] = {6 * CUBES + 0, 6 * CUBES + 2, 6 * CUBES + 20, 6 * CUBES + 18, 6 * CUBES + 1, 6 * CUBES + 11, 6 * CUBES + 19, 6 * CUBES + 9};
-
-
-
-        switch(select) {
-            case 4:
-                // about x
-                order = 1462;
-                bread = 35;
-
-                int anchor_1_x[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
-                int anchor_4_x[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
-                int anchor_6_x[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
-                int anchor_2_x[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
-                int *anchors_x[7] = {NULL, anchor_1_x, anchor_2_x, NULL, anchor_4_x, NULL, anchor_6_x};
-
-                rotate_center(cubes, select, order, anchors_x);
-
-                rotate_sandwich(cubes, bread, sandwich_3, sandwich_5, !TO_REVERSE);
-
-                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, !TO_REVERSE); // correct
-                break;
-            case 10:
-                // about y
-                order = 5234;
-                bread = 35;
-
-                int anchor_5_y[4] = {5 * CUBES + 18, 5 * CUBES + 19, 5 * CUBES + 20, 3};
-                int anchor_2_y[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
-                int anchor_3_y[4] = {3 * CUBES + 2, 3 * CUBES + 1, 3 * CUBES + 0, 3};
-                int anchor_4_y[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
-                int *anchors_y[7] = {NULL, NULL, anchor_2_y, anchor_3_y, anchor_4_y, anchor_5_y, NULL};
-
-                rotate_center(cubes, select, order, anchors_y);
-
-                rotate_sandwich(cubes, bread, sandwich_1, sandwich_6, !TO_REVERSE);
-
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, !TO_REVERSE); // correct
-                break;
-            case 12:
-                // about z
-                order = 5136;
-                bread = 0;
-
-                int anchor_5_z[4] = {5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 20, -1};
-                int anchor_1_z[4] = {1 * CUBES + 8, 1 * CUBES + 17, 1 * CUBES + 26, -1};
-                int anchor_3_z[4] = {3 * CUBES + 2, 3 * CUBES + 5, 3 * CUBES + 8, -1};
-                int anchor_6_z[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
-                int *anchors_z[7] = {NULL, anchor_1_z, NULL, anchor_3_z, NULL, anchor_5_z, anchor_6_z};
-
-                rotate_center(cubes, select, order, anchors_z);
-
-                rotate_sandwich(cubes, bread, sandwich_2, sandwich_4, !TO_REVERSE);
-
-                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, !TO_REVERSE); // correct
-                break;
-            case 14:
-                // about z
-                order = 6315;
-
-                int anchor_5_z_[4] = {5 * CUBES + 26, 5 * CUBES + 23, 5 * CUBES + 20, -1};
-                int anchor_1_z_[4] = {1 * CUBES + 8, 1 * CUBES + 17, 1 * CUBES + 26, -1};
-                int anchor_3_z_[4] = {3 * CUBES + 2, 3 * CUBES + 5, 3 * CUBES + 8, -1};
-                int anchor_6_z_[4] = {6 * CUBES + 20, 6 * CUBES + 11, 6 * CUBES + 2, -1};
-                int *anchors_z_[7] = {NULL, anchor_1_z_, NULL, anchor_3_z_, NULL, anchor_5_z_, anchor_6_z_};
-
-                rotate_center(cubes, select, order, anchors_z_);
-
-                rotate_sandwich(cubes, bread, sandwich_2, sandwich_4, TO_REVERSE);
-
-                rotate_self(cubes, 0, corner_anchors_z, edge_anchors_z, increment_z, TO_REVERSE); // reverse
-                break;
-            case 16:
-                // about y
-                order = 4325;
-
-                int anchor_5_y_[4] = {5 * CUBES + 18, 5 * CUBES + 19, 5 * CUBES + 20, 3};
-                int anchor_2_y_[4] = {2 * CUBES + 0, 2 * CUBES + 9, 2 * CUBES + 18, 3};
-                int anchor_3_y_[4] = {3 * CUBES + 2, 3 * CUBES + 1, 3 * CUBES + 0, 3};
-                int anchor_4_y_[4] = {4 * CUBES + 20, 4 * CUBES + 11, 4 * CUBES + 2, 3};
-                int *anchors_y_[7] = {NULL, NULL, anchor_2_y_, anchor_3_y_, anchor_4_y_, anchor_5_y_, NULL};
-
-                rotate_center(cubes, select, order, anchors_y_);
-
-                rotate_sandwich(cubes, bread, sandwich_1, sandwich_6, TO_REVERSE);
-
-                rotate_self(cubes, 0, corner_anchors_y, edge_anchors_y, increment_y, TO_REVERSE); // reverse
-                break;
-            case 22:
-                // about x
-                order = 2641;
-
-                int anchor_1_x_[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
-                int anchor_4_x_[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
-                int anchor_6_x_[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
-                int anchor_2_x_[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
-                int *anchors_x_[7] = {NULL, anchor_1_x_, anchor_2_x_, NULL, anchor_4_x_, NULL, anchor_6_x_};
-
-                rotate_center(cubes, select, order, anchors_x_);
-
-                rotate_sandwich(cubes, bread, sandwich_3, sandwich_5, TO_REVERSE);
-
-                rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, TO_REVERSE); // reverse
-                break;
-            default:
-                order = 0;
-        }
-
+        rotate_center_piece(cubes, select);
     }
     else {
-        rotate_corner(cubes, select);
+        switch(select) {
+            case 0:
+                rotate_center_piece(cubes, 12);
+                rotate_center_piece(cubes, 4);
+
+                break;
+
+            case 2:
+                rotate_center_piece(cubes, 10);
+                rotate_center_piece(cubes, 4);
+
+                break;
+
+            case 6:
+                rotate_center_piece(cubes, 12);
+                rotate_center_piece(cubes, 16);
+
+                break;
+
+            case 8:
+                rotate_center_piece(cubes, 16);
+                rotate_center_piece(cubes, 14);
+                break;
+
+            case 18:
+                rotate_center_piece(cubes, 10);
+                rotate_center_piece(cubes, 22);
+                break;
+
+            case 20:
+                rotate_center_piece(cubes, 14);
+                rotate_center_piece(cubes, 22);
+                break;
+
+            case 24:
+                rotate_center_piece(cubes, 22);
+                rotate_center_piece(cubes, 16);
+                break;
+
+            case 26:
+                rotate_center_piece(cubes, 22);
+                rotate_center_piece(cubes, 14);
+                break;
+
+            default:
+                break;
+        }
     }
+
 }
 
 
