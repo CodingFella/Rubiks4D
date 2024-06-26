@@ -22,6 +22,9 @@ let to_rotate = 0;
 let lastCall = 0;
 const delay = 20;
 
+let angle_percent = 30;
+let type = 0;
+
 let magnitude = 0.05;
 
 
@@ -51,6 +54,8 @@ async function startDemo() {
     //     x = -1;
     //     y = -1;
     // }
+
+
 
     document.addEventListener("keydown", async(event) => {
         if(event.key === 'w') {
@@ -113,6 +118,16 @@ async function startDemo() {
             if(current_cube > 26) {
                 current_cube = 26;
             }
+        } else if (event.key === 'o') {
+            angle_percent -= 1;
+            if(angle_percent < 0) {
+                angle_percent = 0;
+            }
+        } else if (event.key === 'p') {
+            angle_percent += 1;
+            if(angle_percent > 100) {
+                angle_percent = 100;
+            }
         }
         // console.log(current_input);
         render(instance);
@@ -120,7 +135,7 @@ async function startDemo() {
 }
 
 function render(instance) {
-    const pixels = instance.exports.render(dt, current_input, A, B, C, x, y, current_face * 27 + current_cube, to_rotate);
+    const pixels = instance.exports.render(dt, current_input, A, B, C, x, y, current_face * 27 + current_cube, to_rotate, angle_percent, type);
     const buffer = instance.exports.memory.buffer;
     const imageData = new ImageData(new Uint8ClampedArray(buffer, pixels, app.width * app.height * 4), app.width);
     ctx.putImageData(imageData, 0, 0);

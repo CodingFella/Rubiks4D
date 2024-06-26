@@ -30,6 +30,30 @@
 
 #define BG_COLOR BLACK
 
+// type as in what axis to rotate on
+// It will be clockwise when looking at cube from said direction
+
+#define NO_TYPE -1
+#define POS_X 0
+#define POS_Y 1
+#define POS_Z 2
+#define NEG_X 3
+#define NEG_Y 4
+#define NEG_Z 5
+#define POS_X_POS_Y 6
+#define POS_Y_POS_X 6
+#define POS_X_POS_Z 7
+#define POS_X_NEG_Y 8
+#define POS_X_NEG_Z 9
+#define POS_Y_POS_Z 10
+#define POS_Y_NEG_X 11
+#define POS_Y_NEG_Z 12
+#define POS_Z_NEG_X 13
+#define POS_Z_NEG_Y 14
+#define NEG_X_NEG_Y 15
+#define NEG_X_NEG_Z 16
+#define NEG_Y_NEG_Z 17
+
 static uint32_t pixels[WIDTH * HEIGHT];
 
 float A, B, C;
@@ -88,7 +112,26 @@ float get_cube_z_sum(Point_3D *input) {
     return sum;
 }
 
-void generateCorners(cube *cubes, float magnitude, float camera_distance, float x_offset, float y_offset, float z_offset) {
+float quaternion_x(float i, float j, float k, const double q[4]) {
+    return i * (1 - 2 * (q[2] * q[2] + q[3] * q[3])) +
+            j * (2 * (q[1] * q[2] - q[3] * q[0])) +
+            k * (2 * (q[1] * q[3] + q[2] * q[0]));
+}
+
+float quaternion_y(float i, float j, float k, const double q[4]) {
+    return i * (2 * (q[1] * q[2] + q[3] * q[0])) +
+            j * (1 - 2 * (q[1] * q[1] + q[3] * q[3])) +
+            k * (2 * (q[2] * q[3] - q[1] * q[0]));
+}
+
+float quaternion_z(float i, float j, float k, const double q[4]) {
+    return i * (2 * (q[1] * q[3] - q[2] * q[0])) +
+            j * (2 * (q[2] * q[3] + q[1] * q[0])) +
+            k * (1 - 2 * (q[1] * q[1] + q[2] * q[2]));
+}
+
+void generateCorners(cube *cubes, float magnitude, float camera_distance, float x_offset, float y_offset, float z_offset,
+                     int angle_percent, int type) {
     float x_factor = -1;
     float y_factor = -1;
     float z_factor = -1;
@@ -104,7 +147,41 @@ void generateCorners(cube *cubes, float magnitude, float camera_distance, float 
         newPoint.y = y_factor * magnitude + y_offset;
         newPoint.z = z_factor * magnitude + z_offset + camera_distance;
 
-        cubes->points[i] = newPoint;
+        if(angle_percent == 0 || type == NO_TYPE) {
+            cubes->points[i] = newPoint;
+        }
+        else {
+            Point_3D rotatedNewPoint;
+            double rad = (angle_percent / 100.0) * (PI / 2.0); // only do 90deg for now
+
+            double q[4];
+
+            double sin_value = sin(rad/2.0);
+
+            q[0] = cos(rad/2.0);
+
+            Point_3D vector_pos_x = {1, 0, 0};
+            Point_3D vector_neg_x = {-1, 0, 0};
+
+            switch(type) {
+                case POS_X:
+                    q[1] = sin_value * vector_pos_x.x;
+                    q[2] = sin_value * vector_pos_x.y;
+                    q[3] = sin_value * vector_pos_x.z;
+                    break;
+                case NEG_X:
+                    q[1] = sin_value * vector_neg_x.x;
+                    q[2] = sin_value * vector_neg_x.y;
+                    q[3] = sin_value * vector_neg_x.z;
+                    break;
+            }
+
+            rotatedNewPoint.x = quaternion_x(newPoint.x, newPoint.y, newPoint.z - camera_distance, q);
+            rotatedNewPoint.y = quaternion_y(newPoint.x, newPoint.y, newPoint.z - camera_distance, q);
+            rotatedNewPoint.z = quaternion_z(newPoint.x, newPoint.y, newPoint.z - camera_distance, q) + camera_distance;
+            cubes->points[i] = rotatedNewPoint;
+
+        }
     }
 }
 
@@ -137,7 +214,8 @@ void copy_cube(cube *dest, cube *src) {
 
 }
 
-cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float magnitude, float camera_distance, uint32_t *colors) {
+cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float magnitude, float camera_distance,
+                    uint32_t *colors, int angle_percent, int type) {
     int i, j, k;
 
     // copy
@@ -179,10 +257,20 @@ cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float ma
         for (i = 0; i < DIMENSION; i++) {
             for (j = 0; j < DIMENSION; j++) {
                 for (k = 0; k < DIMENSION; k++) {
-                    generateCorners(&translated_cubes[count], magnitude, camera_distance,
-                                    x_offset + (spacing * (float) i) + offsetVectors[vector].x,
-                                    y_offset + (spacing * (float) j) + offsetVectors[vector].y,
-                                    z_offset + (spacing * (float) k) + offsetVectors[vector].z);
+                    if(vector == 0) {
+                        generateCorners(&translated_cubes[count], magnitude, camera_distance,
+                                        x_offset + (spacing * (float) i) + offsetVectors[vector].x,
+                                        y_offset + (spacing * (float) j) + offsetVectors[vector].y,
+                                        z_offset + (spacing * (float) k) + offsetVectors[vector].z,
+                                        angle_percent, type);
+                    }
+                    else {
+                        generateCorners(&translated_cubes[count], magnitude, camera_distance,
+                                        x_offset + (spacing * (float) i) + offsetVectors[vector].x,
+                                        y_offset + (spacing * (float) j) + offsetVectors[vector].y,
+                                        z_offset + (spacing * (float) k) + offsetVectors[vector].z,
+                                        0, 0);
+                    }
 //                    translated_cubes[count].color = colors[vector];
                     count++;
                 }
@@ -591,7 +679,7 @@ void rotate_self(cube *cubes, int cube_num, int corner_anchors[4], int edge_anch
 
 }
 
-int last_move_in_axis = -1;
+int last_move_in_axis = NO_TYPE;
 
 void change_center(cube *cubes, const int *cube_order) {
 
@@ -614,7 +702,7 @@ void change_center(cube *cubes, const int *cube_order) {
 
     // i think the 7th cube also rotates here.. need to figure out what axis and direction
     if(moving_in == 1 || moving_in == 6) {
-        if(last_move_in_axis == -1) {
+        if(last_move_in_axis == NO_TYPE) {
             last_move_in_axis = Y_AXIS;
         }
 
@@ -638,7 +726,7 @@ void change_center(cube *cubes, const int *cube_order) {
     }
 
     if(moving_in == 2 || moving_in == 4) {
-        if(last_move_in_axis == -1) {
+        if(last_move_in_axis == NO_TYPE) {
             last_move_in_axis = Z_AXIS;
         }
 
@@ -663,7 +751,7 @@ void change_center(cube *cubes, const int *cube_order) {
     }
 
     if(moving_in == 3 || moving_in == 5) {
-        if(last_move_in_axis == -1) {
+        if(last_move_in_axis == NO_TYPE) {
             last_move_in_axis = X_AXIS;
         }
 
@@ -1052,10 +1140,100 @@ void rotate(cube *cubes, int select) {
 
 }
 
+int select_current_type(int select) {
+    switch(select) {
+        case 0:
+            // Code for case 0
+            return -1;
+        case 1:
+            // Code for case 1
+            return -1;
+        case 2:
+            // Code for case 2
+            return -1;
+        case 3:
+            // Code for case 3
+            return -1;
+        case 4:
+            // Code for case 4
+            return NEG_X;
+        case 5:
+            // Code for case 5
+            return -1;
+        case 6:
+            // Code for case 6
+            return -1;
+        case 7:
+            // Code for case 7
+            return -1;
+        case 8:
+            // Code for case 8
+            return -1;
+        case 9:
+            // Code for case 9
+            return -1;
+        case 10:
+            // Code for case 10
+            return -1;
+        case 11:
+            // Code for case 11
+            return -1;
+        case 12:
+            // Code for case 12
+            return -1;
+        case 13:
+            // Code for case 13
+            return -1;
+        case 14:
+            // Code for case 14
+            return -1;
+        case 15:
+            // Code for case 15
+            return -1;
+        case 16:
+            // Code for case 16
+            return -1;
+        case 17:
+            // Code for case 17
+            return -1;
+        case 18:
+            // Code for case 18
+            return -1;
+        case 19:
+            // Code for case 19
+            return -1;
+        case 20:
+            // Code for case 20
+            return -1;
+        case 21:
+            // Code for case 21
+            return -1;
+        case 22:
+            // Code for case 22
+            return POS_X;
+        case 23:
+            // Code for case 23
+            return -1;
+        case 24:
+            // Code for case 24
+            return -1;
+        case 25:
+            // Code for case 25
+            return -1;
+        case 26:
+            // Code for case 26
+            return -1;
+        default:
+            // Code for default case
+            return -1;
+    }
+
+}
 
 
 
-uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, int y, int select, int to_rotate) {
+uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, int y, int select, int to_rotate,
+                 int angle_percent, int type) {
 
 //    process_key(keyboard_input);
     found_hovered = 0;
@@ -1071,6 +1249,7 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
     cube cubes[num_cubes];
     cube translated_cubes[num_cubes];
 
+    int current_type = NO_TYPE;
 
 
     uint32_t colors[SIDES] = {PURPLE, WHITE, ORANGE, BLUE, RED, GREEN, YELLOW, PINK};
@@ -1126,8 +1305,10 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
         }
         else {
             rotate(cubes, select);
-
         }
+    }
+    else {
+        current_type = select_current_type(select);
     }
 
     if(select >= 0 && select < num_cubes) {
@@ -1148,7 +1329,7 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
     float camera_distance = 200;
 
     Point_3D camera = {0, 0, 0};
-    generateCubes(cubes, translated_cubes, num_cubes, magnitude, camera_distance, colors);
+    generateCubes(cubes, translated_cubes, num_cubes, magnitude, camera_distance, colors, angle_percent, current_type);
 
 
 
@@ -1174,7 +1355,7 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
 
 int main(void) {
 //    printf("hello world");
-    render(0, 0, 1, 0, 0, 397, 301, 4, 1);
+    render(0, 0, 1, 0, 0, 397, 301, 4, 0, 30, 0);
 }
 
 void *memcpy(void *dest, const void *src, size_t n) {
