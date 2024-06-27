@@ -20,12 +20,17 @@ let current_face = 0;
 let to_rotate = 0;
 
 let lastCall = 0;
-const delay = 20;
+
+
+let delay = 0;
 
 let angle_percent = 0;
+let angle_jump = 15;
 let type = -1;
 
 let magnitude = 0.05;
+
+let rotating = false;
 
 
 async function startDemo() {
@@ -58,6 +63,9 @@ async function startDemo() {
 
 
     document.addEventListener("keydown", async(event) => {
+        if(rotating) {
+            return;
+        }
         if(event.key === 'w') {
             current_input = 1;
             A += magnitude;
@@ -107,20 +115,28 @@ async function startDemo() {
         } else if (event.key === '7') {
             current_face = 6;
             current_cube = 0;
-        } else if (event.key === '8') {
-            current_face = 7;
-            current_cube = 0;
-        } else if (event.key === 'r') {
+        }
+        // else if (event.key === '8') {
+        //     current_face = 7;
+        //     current_cube = 0;
+        // }
+        else if (event.key === 'r') {
+            if(rotating) {
+                return;
+            }
+
+            rotating = true;
             to_rotate = 0;
 
-            for(let i = 1; i <= 100; i+= 5) {
+            for(let i = 1; i <= 100; i+= angle_jump) {
                 angle_percent = i;
                 render(instance);
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => setTimeout(resolve));
             }
 
             to_rotate = 1;
-            console.log("r");
+
+            rotating = false;
 
 
         } else if (event.key === '/') {

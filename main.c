@@ -15,6 +15,7 @@
 #define DIMENSION 3
 #define NUM_PLANES 6
 #define PLANE_CORNERS 4
+#define CORE_CUBE 0
 
 #define TO_REVERSE 1
 
@@ -65,10 +66,12 @@
 #define POS_X_POS_Y_NEG_Z 24
 #define POS_X_POS_Y_POS_Z 25
 
+#define MOVE_IN 26
 
 static uint32_t pixels[WIDTH * HEIGHT];
 
 float A, B, C;
+
 
 typedef struct {
     float x, y, z;
@@ -98,6 +101,9 @@ typedef struct {
 
     uint32_t color;
 } plane;
+
+void compute_hidden(cube *cubes, int moving_in);
+
 
 float calculateX(float i, float j, float k) {
     return j * sin(A) * sin(B) * cos(C) - k * cos(A) * sin(B) * cos(C) +
@@ -149,7 +155,8 @@ void populate_q(double q[4], double sin_value, Point_3D vector) {
 }
 
 void generateCorners(cube *cubes, float magnitude, float camera_distance, float x_offset, float y_offset, float z_offset,
-                     int angle_percent, int type, int select) {
+                     int angle_percent, int type, int select, int curr_cube, int move_in_cube,
+                     float dx, float dy, float dz, float separation) {
     float x_factor = -1;
     float y_factor = -1;
     float z_factor = -1;
@@ -161,54 +168,273 @@ void generateCorners(cube *cubes, float magnitude, float camera_distance, float 
         if((i % 2) == 0) y_factor *= -1;
         if((i % 4) == 0) z_factor *= -1;
 
-        newPoint.x = x_factor * magnitude + x_offset;
-        newPoint.y = y_factor * magnitude + y_offset;
-        newPoint.z = z_factor * magnitude + z_offset + camera_distance;
+        if(type != MOVE_IN) {
+            newPoint.x = x_factor * magnitude + x_offset;
+            newPoint.y = y_factor * magnitude + y_offset;
+            newPoint.z = z_factor * magnitude + z_offset + camera_distance;
+        }
 
-        if(angle_percent == 0 || type == NO_TYPE) {
+        Point_3D rotatedNewPoint;
+        double rad = (angle_percent / 100.0) * (PI / 2.0); // only do 90deg for now
+        double angle_of_turn;
+        double q[4];
+
+        double sin_value;
+
+        float one_over_rt_2 = (float) (1.0 / RT_2);
+        float one_over_rt_3 = (float) (1.0 / RT_3);
+
+        Point_3D vector_pos_x = {1, 0, 0};
+        Point_3D vector_neg_x = {-1, 0, 0};
+        Point_3D vector_pos_y = {0, 1, 0};
+        Point_3D vector_neg_y = {0, -1, 0};
+        Point_3D vector_pos_z = {0, 0, 1};
+        Point_3D vector_neg_z = {0, 0, -1};
+
+        Point_3D vector_pos_x_pos_y = {one_over_rt_2, one_over_rt_2, 0};
+        Point_3D vector_pos_x_pos_z = {one_over_rt_2, 0, one_over_rt_2};
+        Point_3D vector_pos_x_neg_y = {one_over_rt_2, -one_over_rt_2, 0};
+        Point_3D vector_pos_x_neg_z = {one_over_rt_2, 0, -one_over_rt_2};
+        Point_3D vector_pos_y_pos_z = {0, one_over_rt_2, one_over_rt_2};
+        Point_3D vector_neg_x_pos_y = {-one_over_rt_2, one_over_rt_2, 0};
+        Point_3D vector_pos_y_neg_z = {0, one_over_rt_2, -one_over_rt_2};
+        Point_3D vector_neg_x_pos_z = {-one_over_rt_2, 0, one_over_rt_2};
+        Point_3D vector_neg_y_pos_z = {0, -one_over_rt_2, one_over_rt_2};
+        Point_3D vector_neg_x_neg_y = {-one_over_rt_2, -one_over_rt_2, 0};
+        Point_3D vector_neg_x_neg_z = {-one_over_rt_2, 0, -one_over_rt_2};
+        Point_3D vector_neg_y_neg_z = {0, -one_over_rt_2, -one_over_rt_2};
+
+        Point_3D vector_neg_x_neg_y_neg_z = {-one_over_rt_3, -one_over_rt_3, -one_over_rt_3};
+        Point_3D vector_neg_x_neg_y_pos_z = {-one_over_rt_3, -one_over_rt_3, one_over_rt_3};
+        Point_3D vector_neg_x_pos_y_neg_z = {-one_over_rt_3, one_over_rt_3, -one_over_rt_3};
+        Point_3D vector_neg_x_pos_y_pos_z = {-one_over_rt_3, one_over_rt_3, one_over_rt_3};
+        Point_3D vector_pos_x_neg_y_neg_z = {one_over_rt_3, -one_over_rt_3, -one_over_rt_3};
+        Point_3D vector_pos_x_neg_y_pos_z = {one_over_rt_3, -one_over_rt_3, one_over_rt_3};
+        Point_3D vector_pos_x_pos_y_neg_z = {one_over_rt_3, one_over_rt_3, -one_over_rt_3};
+        Point_3D vector_pos_x_pos_y_pos_z = {one_over_rt_3, one_over_rt_3, one_over_rt_3};
+
+        if(type != MOVE_IN && (angle_percent == 0 || type == NO_TYPE)) {
             cubes->points[i] = newPoint;
         }
+        else if(type == MOVE_IN) {
+
+            newPoint.x = x_factor * magnitude + x_offset + dx;
+            newPoint.y = y_factor * magnitude + y_offset + dy;
+            newPoint.z = z_factor * magnitude + z_offset + camera_distance + dz;
+
+            cubes->points[i] = newPoint;
+
+            rad = (angle_percent / 100.0) * (PI / 2.0);
+            sin_value = sin(rad / 2.0);
+            q[0] = cos(rad / 2.0);
+
+            switch (move_in_cube) {
+                // move-in: 1
+                case 1:
+                    // rotato potato
+                    switch(curr_cube) {
+                        case 2:
+                            populate_q(q, sin_value, vector_pos_x);
+                            break;
+
+                        case 3:
+                            populate_q(q, sin_value, vector_neg_z);
+                            break;
+
+                        case 4:
+                            populate_q(q, sin_value, vector_neg_x);
+                            break;
+
+                        case 5:
+                            populate_q(q, sin_value, vector_pos_z);
+                            break;
+                        default:
+                            // no quaternion rotation
+                            q[0] = 0;
+                            q[1] = 0;
+                            q[2] = 0;
+                            q[3] = 0;
+
+                            // slide pattern
+                            newPoint.y = y_factor * magnitude + y_offset + dy + (float) (angle_percent / 100.0 * separation);
+
+                            break;
+                    }
+                    break;
+
+                    // move-in: 2
+                case 2:
+                    switch(curr_cube) {
+
+                        case 1:
+                            populate_q(q, sin_value, vector_neg_x);
+                            break;
+
+                        case 3:
+                            populate_q(q, sin_value, vector_neg_y);
+                            break;
+
+                        case 5:
+                            populate_q(q, sin_value, vector_pos_y);
+                            break;
+
+                        case 6:
+                            populate_q(q, sin_value, vector_pos_x);
+                            break;
+
+                        default:
+                            // no quaternion rotation
+                            q[0] = 0;
+                            q[1] = 0;
+                            q[2] = 0;
+                            q[3] = 0;
+
+                            newPoint.z = z_factor * magnitude + z_offset + dz + camera_distance - (float) (angle_percent / 100.0 * separation);
+
+                            break;
+                    }
+                    break;
+
+                    // move-in: 3
+                case 3:
+                    switch(curr_cube) {
+                        case 1:
+                            populate_q(q, sin_value, vector_pos_z);
+                            break;
+
+                        case 2:
+                            populate_q(q, sin_value, vector_pos_y);
+                            break;
+
+                        case 4:
+                            populate_q(q, sin_value, vector_neg_y);
+                            break;
+
+                        case 6:
+                            populate_q(q, sin_value, vector_neg_z);
+                            break;
+
+                        default:
+                            // no quaternion rotation
+                            q[0] = 0;
+                            q[1] = 0;
+                            q[2] = 0;
+                            q[3] = 0;
+
+                            newPoint.x = x_factor * magnitude + x_offset + dx - (float) (angle_percent / 100.0 * separation);
+
+                            break;
+                    }
+                    break;
+
+                    // move-in: 4
+                case 4:
+                    switch(curr_cube) {
+                        case 1:
+                            populate_q(q, sin_value, vector_pos_x);
+                            break;
+
+                        case 3:
+                            populate_q(q, sin_value, vector_pos_y);
+                            break;
+
+                        case 5:
+                            populate_q(q, sin_value, vector_neg_y);
+                            break;
+
+                        case 6:
+                            populate_q(q, sin_value, vector_neg_x);
+                            break;
+                        default:
+                            // no quaternion rotation
+                            q[0] = 0;
+                            q[1] = 0;
+                            q[2] = 0;
+                            q[3] = 0;
+
+                            newPoint.z = z_factor * magnitude + z_offset + dz + camera_distance + (float) (angle_percent / 100.0 * separation);
+
+                            break;
+                    }
+                    break;
+
+                // move-in: 5
+                case 5:
+                    switch(curr_cube) {
+                        case 1:
+                            populate_q(q, sin_value, vector_neg_z);
+                            break;
+
+                        case 2:
+                            populate_q(q, sin_value, vector_neg_y);
+                            break;
+
+                        case 4:
+                            populate_q(q, sin_value, vector_pos_y);
+                            break;
+
+                        case 6:
+                            populate_q(q, sin_value, vector_pos_z);
+                            break;
+
+                        default:
+                            // no quaternion rotation
+                            q[0] = 0;
+                            q[1] = 0;
+                            q[2] = 0;
+                            q[3] = 0;
+
+                            newPoint.x = x_factor * magnitude + x_offset + dx + (float) (angle_percent / 100.0 * separation);
+
+                            break;
+                    }
+                    break;
+
+                // move-in: 6
+                case 6:
+                    switch(curr_cube) {
+                        case 2:
+                            populate_q(q, sin_value, vector_neg_x);
+                            break;
+
+                        case 3:
+                            populate_q(q, sin_value, vector_pos_z);
+                            break;
+
+                        case 4:
+                            populate_q(q, sin_value, vector_pos_x);
+                            break;
+
+                        case 5:
+                            populate_q(q, sin_value, vector_neg_z);
+                            break;
+
+                        default:
+                            // no quaternion rotation
+                            q[0] = 0;
+                            q[1] = 0;
+                            q[2] = 0;
+                            q[3] = 0;
+
+                            newPoint.y = y_factor * magnitude + y_offset + dy - (float) (angle_percent / 100.0 * separation);
+
+                            break;
+                    }
+                    break;
+
+                default:
+                    break;
+
+            }
+
+            rotatedNewPoint.x = quaternion_x(newPoint.x - dx, newPoint.y - dy, newPoint.z - camera_distance - dz, q) + dx;
+            rotatedNewPoint.y = quaternion_y(newPoint.x - dx, newPoint.y - dy, newPoint.z - camera_distance - dz, q) + dy;
+            rotatedNewPoint.z = quaternion_z(newPoint.x - dx, newPoint.y - dy, newPoint.z - camera_distance - dz, q) + camera_distance + dz;
+            cubes->points[i] = rotatedNewPoint;
+
+        }
+
         else {
-            Point_3D rotatedNewPoint;
-            double rad = (angle_percent / 100.0) * (PI / 2.0); // only do 90deg for now
-            double angle_of_turn;
-            double q[4];
-
-            double sin_value;
-
-            float one_over_rt_2 = (float) (1.0 / RT_2);
-            float one_over_rt_3 = (float) (1.0 / RT_3);
-
-            Point_3D vector_pos_x = {1, 0, 0};
-            Point_3D vector_neg_x = {-1, 0, 0};
-            Point_3D vector_pos_y = {0, 1, 0};
-            Point_3D vector_neg_y = {0, -1, 0};
-            Point_3D vector_pos_z = {0, 0, 1};
-            Point_3D vector_neg_z = {0, 0, -1};
-
-            Point_3D vector_pos_x_pos_y = {one_over_rt_2, one_over_rt_2, 0};
-            Point_3D vector_pos_x_pos_z = {one_over_rt_2, 0, one_over_rt_2};
-            Point_3D vector_pos_x_neg_y = {one_over_rt_2, -one_over_rt_2, 0};
-            Point_3D vector_pos_x_neg_z = {one_over_rt_2, 0, -one_over_rt_2};
-            Point_3D vector_pos_y_pos_z = {0, one_over_rt_2, one_over_rt_2};
-            Point_3D vector_neg_x_pos_y = {-one_over_rt_2, one_over_rt_2, 0};
-            Point_3D vector_pos_y_neg_z = {0, one_over_rt_2, -one_over_rt_2};
-            Point_3D vector_neg_x_pos_z = {-one_over_rt_2, 0, one_over_rt_2};
-            Point_3D vector_neg_y_pos_z = {0, -one_over_rt_2, one_over_rt_2};
-            Point_3D vector_neg_x_neg_y = {-one_over_rt_2, -one_over_rt_2, 0};
-            Point_3D vector_neg_x_neg_z = {-one_over_rt_2, 0, -one_over_rt_2};
-            Point_3D vector_neg_y_neg_z = {0, -one_over_rt_2, -one_over_rt_2};
-
-            Point_3D vector_neg_x_neg_y_neg_z = {-one_over_rt_3, -one_over_rt_3, -one_over_rt_3};
-            Point_3D vector_neg_x_neg_y_pos_z = {-one_over_rt_3, -one_over_rt_3, one_over_rt_3};
-            Point_3D vector_neg_x_pos_y_neg_z = {-one_over_rt_3, one_over_rt_3, -one_over_rt_3};
-            Point_3D vector_neg_x_pos_y_pos_z = {-one_over_rt_3, one_over_rt_3, one_over_rt_3};
-            Point_3D vector_pos_x_neg_y_neg_z = {one_over_rt_3, -one_over_rt_3, -one_over_rt_3};
-            Point_3D vector_pos_x_neg_y_pos_z = {one_over_rt_3, -one_over_rt_3, one_over_rt_3};
-            Point_3D vector_pos_x_pos_y_neg_z = {one_over_rt_3, one_over_rt_3, -one_over_rt_3};
-            Point_3D vector_pos_x_pos_y_pos_z = {one_over_rt_3, one_over_rt_3, one_over_rt_3};
-
-
             // edge
             if(select % 2 == 1) {
                 angle_of_turn = PI;
@@ -362,7 +588,7 @@ void copy_cube(cube *dest, cube *src) {
 }
 
 cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float magnitude, float camera_distance,
-                    uint32_t *colors, int angle_percent, int type, int select) {
+                    uint32_t *colors, int angle_percent, int type, int select, int move_in_cube) {
     int i, j, k;
 
     // copy
@@ -395,7 +621,37 @@ cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float ma
     Point_3D offsetVector4 = {0, 0, -separation};
     Point_3D offsetVector5 = {-separation, 0, 0};
     Point_3D offsetVector6 = {0, +separation, 0};
-    Point_3D offsetVector7 = {+separation * 10, 0, 0};
+    Point_3D offsetVector7 = {0, 0, 0};
+
+    if(type == MOVE_IN) {
+
+        compute_hidden(cubes, move_in_cube);
+
+        switch(move_in_cube) {
+            case 1:
+                offsetVector7.y = -separation * 2;
+                break;
+            case 2:
+                offsetVector7.z = separation * 2;
+                break;
+            case 3:
+                offsetVector7.x = separation * 2;
+                break;
+            case 4:
+                offsetVector7.z = -separation * 2;
+                break;
+            case 5:
+                offsetVector7.x = -separation * 2;
+                break;
+            case 6:
+                offsetVector7.y = separation * 2;
+                break;
+
+            default:
+                break;
+
+        }
+    }
 
 
     Point_3D offsetVectors[8] = {offsetVector0, offsetVector1, offsetVector2, offsetVector3,
@@ -406,21 +662,34 @@ cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float ma
         for (i = 0; i < DIMENSION; i++) {
             for (j = 0; j < DIMENSION; j++) {
                 for (k = 0; k < DIMENSION; k++) {
-                    if(vector == 0 || (vector == 1 && j == DIMENSION - 1) || (vector == 2 && k == 0) ||
+                    if(type == MOVE_IN) {
+                        generateCorners(&translated_cubes[count], magnitude, camera_distance,
+                                        x_offset + (spacing * (float) i),
+                                        y_offset + (spacing * (float) j),
+                                        z_offset + (spacing * (float) k),
+                                        angle_percent, type, select, vector, move_in_cube,
+                                        offsetVectors[vector].x, offsetVectors[vector].y,
+                                        offsetVectors[vector].z, separation);
+                    }
+                    // rotate core and the 9 closest to it
+                    else if(vector == 0 || (vector == 1 && j == DIMENSION - 1) || (vector == 2 && k == 0) ||
                             (vector == 3 && i == 0) || (vector == 4 && k == DIMENSION - 1) ||
                             (vector == 5 && i == DIMENSION -1 || vector == 6 && j == 0)) {
                         generateCorners(&translated_cubes[count], magnitude, camera_distance,
                                         x_offset + (spacing * (float) i) + offsetVectors[vector].x,
                                         y_offset + (spacing * (float) j) + offsetVectors[vector].y,
                                         z_offset + (spacing * (float) k) + offsetVectors[vector].z,
-                                        angle_percent, type, select);
+                                        angle_percent, type, select, vector, move_in_cube,
+                                        0, 0, 0, separation);
                     }
+
                     else {
                         generateCorners(&translated_cubes[count], magnitude, camera_distance,
                                         x_offset + (spacing * (float) i) + offsetVectors[vector].x,
                                         y_offset + (spacing * (float) j) + offsetVectors[vector].y,
                                         z_offset + (spacing * (float) k) + offsetVectors[vector].z,
-                                        0, 0, select);
+                                        0, NO_TYPE, select, vector, move_in_cube,
+                                        0, 0, 0, separation);
                     }
 //                    translated_cubes[count].color = colors[vector];
                     count++;
@@ -608,8 +877,8 @@ double d_max(double a, double b) {
 }
 
 void draw_cube(uint32_t *canvas, int width, int height, cube *curr_cube, Point_3D *points, uint32_t color,
-               Point_3D camera, int mouseX, int mouseY, int cube_index, int num_cubes) {
-    if(curr_cube->id >= num_cubes - CUBES) {
+               Point_3D camera, int mouseX, int mouseY, int cube_index, int num_cubes, int type, int angle_percent) {
+    if((type != MOVE_IN || angle_percent == 0) && curr_cube->id >= num_cubes - CUBES) {
         return;
     }
 
@@ -650,7 +919,7 @@ void draw_cube(uint32_t *canvas, int width, int height, cube *curr_cube, Point_3
         if(dot_prod < 0.40) {
             dot_prod = 0.40;
         }
-        int percent_change = (int) float_abs((float) ((dot_prod * dot_prod) * 400.0));
+        int percent_change = (int) float_abs((float) ((dot_prod * dot_prod) * 200.0));
 
 
 
@@ -665,7 +934,7 @@ void draw_cube(uint32_t *canvas, int width, int height, cube *curr_cube, Point_3
     }
     if(curr_cube->selected) {
         for(int i=0; i<NUM_PLANES; i++) {
-            planes[i].color = shade(planes[i].color, 1000);
+            planes[i].color = shade(planes[i].color, 100);
         }
     }
 
@@ -831,6 +1100,75 @@ void rotate_self(cube *cubes, int cube_num, int corner_anchors[4], int edge_anch
 
 int last_move_in_axis = NO_TYPE;
 
+void compute_hidden(cube *cubes, int moving_in) {
+
+    if(last_move_in_axis == NO_TYPE) {
+        return;
+    }
+
+    int reverse;
+
+    int corner_anchors_x[4] = {0, 6, 8, 2};
+    int edge_anchors_x[4] = {3, 7, 5, 1};
+    int increment_x = 9;
+
+    int corner_anchors_y[4] = {0, 2, 20, 18};
+    int edge_anchors_y[4] = {1, 11, 19, 9};
+    int increment_y = 3;
+
+    int corner_anchors_z[4] = {18, 24, 6, 0};
+    int edge_anchors_z[4] = {9, 21, 15, 3};
+    int increment_z = 1;
+
+    if(moving_in == 1 || moving_in == 6) {
+        reverse = (moving_in == 1);
+
+        if (Y_AXIS != last_move_in_axis) {
+            if (last_move_in_axis == X_AXIS) {
+                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+            } else if (last_move_in_axis == Z_AXIS) {
+                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+            }
+            last_move_in_axis = Y_AXIS;
+        }
+    }
+
+    if(moving_in == 2 || moving_in == 4) {
+        reverse = (moving_in == 2);
+
+        if (Z_AXIS != last_move_in_axis) {
+            if(last_move_in_axis == X_AXIS) {
+                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+            } else if(last_move_in_axis == Y_AXIS) {
+                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+            }
+            last_move_in_axis = Z_AXIS;
+        }
+    }
+
+    if(moving_in == 3 || moving_in == 5) {
+        reverse = (moving_in == 3);
+
+        if (X_AXIS != last_move_in_axis) {
+            if(last_move_in_axis == Y_AXIS) {
+                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+            } else if(last_move_in_axis == Z_AXIS) {
+                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+            }
+            last_move_in_axis = X_AXIS;
+        }
+    }
+
+
+
+}
+
 void change_center(cube *cubes, const int *cube_order) {
 
     int moving_in = cube_order[0];
@@ -863,16 +1201,18 @@ void change_center(cube *cubes, const int *cube_order) {
 
         rotate_self(cubes, 3, corner_anchors_z, edge_anchors_z, increment_z, !reverse);
         rotate_self(cubes, 5, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-        if (Y_AXIS != last_move_in_axis) {
-            if(last_move_in_axis == X_AXIS) {
-                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-            } else if(last_move_in_axis == Z_AXIS) {
-                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-            }
-            last_move_in_axis = Y_AXIS;
-        }
+//        compute_hidden(cubes, moving_in);
+
+//        if (Y_AXIS != last_move_in_axis) {
+//            if(last_move_in_axis == X_AXIS) {
+//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+//            } else if(last_move_in_axis == Z_AXIS) {
+//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+//            }
+//            last_move_in_axis = Y_AXIS;
+//        }
     }
 
     if(moving_in == 2 || moving_in == 4) {
@@ -887,17 +1227,18 @@ void change_center(cube *cubes, const int *cube_order) {
 
         rotate_self(cubes, 3, corner_anchors_y, edge_anchors_y, increment_y, !reverse);
         rotate_self(cubes, 5, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+//        compute_hidden(cubes, moving_in);
 
-        if (Z_AXIS != last_move_in_axis) {
-            if(last_move_in_axis == X_AXIS) {
-                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-            } else if(last_move_in_axis == Y_AXIS) {
-                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-            }
-            last_move_in_axis = Z_AXIS;
-        }
+//        if (Z_AXIS != last_move_in_axis) {
+//            if(last_move_in_axis == X_AXIS) {
+//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+//            } else if(last_move_in_axis == Y_AXIS) {
+//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
+//            }
+//            last_move_in_axis = Z_AXIS;
+//        }
     }
 
     if(moving_in == 3 || moving_in == 5) {
@@ -914,16 +1255,17 @@ void change_center(cube *cubes, const int *cube_order) {
         rotate_self(cubes, 2, corner_anchors_y, edge_anchors_y, increment_y, reverse);
         rotate_self(cubes, 4, corner_anchors_y, edge_anchors_y, increment_y, !reverse);
 
-        if (X_AXIS != last_move_in_axis) {
-            if(last_move_in_axis == Y_AXIS) {
-                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-            } else if(last_move_in_axis == Z_AXIS) {
-                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-            }
-            last_move_in_axis = X_AXIS;
-        }
+//        compute_hidden(cubes, moving_in);
+//        if (X_AXIS != last_move_in_axis) {
+//            if(last_move_in_axis == Y_AXIS) {
+//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
+//            } else if(last_move_in_axis == Z_AXIS) {
+//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
+//            }
+//            last_move_in_axis = X_AXIS;
+//        }
     }
 
     int i;
@@ -1395,6 +1737,8 @@ int select_current_type(int select) {
 
 
 
+int move_in_cube;
+
 uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, int y, int select, int to_rotate,
                  int angle_percent, int type) {
 
@@ -1412,10 +1756,9 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
     cube cubes[num_cubes];
     cube translated_cubes[num_cubes];
 
-    int current_type = NO_TYPE;
+    int current_type;
 
-
-    uint32_t colors[SIDES] = {PURPLE, WHITE, ORANGE, BLUE, RED, GREEN, YELLOW, PINK};
+    uint32_t colors[SIDES] = {PURPLE, WHITE, CADMIUM_ORANGE, BLUE, RED, GREEN, YELLOW, PINK};
 
     if(dt == 0) {
         resetFaces(cubes, num_cubes, colors);
@@ -1471,7 +1814,13 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
         }
     }
     else {
-        current_type = select_current_type(select);
+        if(select >= CUBES) {
+            current_type = MOVE_IN;
+            move_in_cube = select / CUBES;
+        }
+        else {
+            current_type = select_current_type(select);
+        }
     }
 
     if(select >= 0 && select < num_cubes) {
@@ -1492,12 +1841,13 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
     float camera_distance = 200;
 
     Point_3D camera = {0, 0, 0};
-    generateCubes(cubes, translated_cubes, num_cubes, magnitude, camera_distance, colors, angle_percent, current_type, select);
+    generateCubes(cubes, translated_cubes, num_cubes, magnitude, camera_distance, colors, angle_percent, current_type, select, move_in_cube);
 
 
 
     for(int i = 0; i < num_cubes; i++) {
-        draw_cube(pixels, WIDTH, HEIGHT, &translated_cubes[i], translated_cubes[i].points, translated_cubes[i].color, camera, x, y, i, num_cubes);
+        draw_cube(pixels, WIDTH, HEIGHT, &translated_cubes[i], translated_cubes[i].points, translated_cubes[i].color, camera,
+                  x, y, i, num_cubes, current_type, angle_percent);
     }
 
 
@@ -1507,6 +1857,7 @@ uint32_t *render(int dt, int keyboard_input, float a, float b, float c, int x, i
             convert_3D_to_2D(c_2D, WIDTH, HEIGHT, translated_cubes[i].points, camera);
 
             draw_outline(c_2D);
+            break;
         }
     }
 
