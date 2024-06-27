@@ -22,8 +22,8 @@ let to_rotate = 0;
 let lastCall = 0;
 const delay = 20;
 
-let angle_percent = 30;
-let type = 0;
+let angle_percent = 0;
+let type = -1;
 
 let magnitude = 0.05;
 
@@ -111,8 +111,18 @@ async function startDemo() {
             current_face = 7;
             current_cube = 0;
         } else if (event.key === 'r') {
+            to_rotate = 0;
+
+            for(let i = 1; i <= 100; i+= 5) {
+                angle_percent = i;
+                render(instance);
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+
             to_rotate = 1;
             console.log("r");
+
+
         } else if (event.key === '/') {
             current_cube += 9;
             if(current_cube > 26) {
@@ -142,6 +152,8 @@ function render(instance) {
     current_input = 0;
     dt += 1;
     to_rotate = 0;
+    angle_percent = 0;
+    type = -1;
 }
 
 startDemo();
