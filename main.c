@@ -406,7 +406,9 @@ cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float ma
         for (i = 0; i < DIMENSION; i++) {
             for (j = 0; j < DIMENSION; j++) {
                 for (k = 0; k < DIMENSION; k++) {
-                    if(vector == 0) {
+                    if(vector == 0 || (vector == 1 && j == DIMENSION - 1) || (vector == 2 && k == 0) ||
+                            (vector == 3 && i == 0) || (vector == 4 && k == DIMENSION - 1) ||
+                            (vector == 5 && i == DIMENSION -1 || vector == 6 && j == 0)) {
                         generateCorners(&translated_cubes[count], magnitude, camera_distance,
                                         x_offset + (spacing * (float) i) + offsetVectors[vector].x,
                                         y_offset + (spacing * (float) j) + offsetVectors[vector].y,
@@ -1026,11 +1028,19 @@ void rotate_edge(cube *cubes, int select, const int anchor_a[4], const int ancho
 
 }
 
-int **get_anchors(int select) {
-    switch(select) {
-        break;
-    }
-}
+//int **get_anchors(int select) {
+//    switch(select) {
+//        case 4:
+//            {}
+//            int anchor_1_x[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
+//            int anchor_4_x[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
+//            int anchor_6_x[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
+//            int anchor_2_x[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
+//            int *anchors_x[7] = {NULL, anchor_1_x, anchor_2_x, NULL, anchor_4_x, NULL, anchor_6_x};
+//
+//            break;
+//    }
+//}
 
 void rotate_center_piece(cube *cubes, int select) {
     int order;
@@ -1072,10 +1082,9 @@ void rotate_center_piece(cube *cubes, int select) {
             int *anchors_x[7] = {NULL, anchor_1_x, anchor_2_x, NULL, anchor_4_x, NULL, anchor_6_x};
 
             rotate_center(cubes, select, order, anchors_x);
-
             rotate_sandwich(cubes, bread, sandwich_3, sandwich_5, !TO_REVERSE);
-
             rotate_self(cubes, 0, corner_anchors_x, edge_anchors_x, increment_x, !TO_REVERSE); // correct
+
             break;
         case 10:
             // about y
