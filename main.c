@@ -154,6 +154,24 @@ void populate_q(double q[4], double sin_value, Point_3D vector) {
     q[3] = sin_value * vector.z;
 }
 
+/*
+ *  Function:    generateCorners
+ *  ----------------------------
+ *  Given the magnitude, camera distance, offsets in the x, y, and z axis,
+ *      this function places the correct corner coordinates into the cube
+ *      pointer that is passed in. By default, the cube will's center will
+ *      be at (0,0,0).
+ *
+ *  Runtime Complexity: O(1)
+ *
+ *  Input params:
+ *      struct cube *cube:      cube object where the corners will be set
+ *      float magnitude:        length of cube size
+ *      float camera_distance:  distance of camera from cube
+ *      float x_offset:         amount of offset in the x-direction
+ *      float y_offset:         amount of offset in the y-direction
+ *      float z_offset:         amount of offset in the z-direction
+ */
 void generateCorners(cube *cubes, float magnitude, float camera_distance, float x_offset, float y_offset, float z_offset,
                      int angle_percent, int type, int select, int curr_cube, int move_in_cube,
                      float dx, float dy, float dz, float separation) {
@@ -558,6 +576,19 @@ void generateCorners(cube *cubes, float magnitude, float camera_distance, float 
     }
 }
 
+/*
+ *  Function:    resetFaces
+ *  -----------------------
+ *  Sets all cubes to default, solved state
+ *
+ *  Input params:
+ *      struct cube *cubes:     pointer to every cube that makes the
+ *      int num_cubes:
+ *
+ *  Return:
+ *      uint32_t *pixels: a 2D array containing the pixels to be drawn
+ *          onto the screen.
+ */
 void resetFaces(cube *cubes, int num_cubes, const uint32_t *colors) {
     int i;
     int curr_color = -1;
@@ -577,6 +608,15 @@ void move_color(cube *dest, cube *src) {
     dest->color = src->color;
 }
 
+/*
+ *  Function:    copy_cube
+ *  ----------------------
+ *  To copy cubes to another array
+ *
+ *  Input params:
+ *      struct cube *dest:      pointer to destination cube (paste)
+ *      struct cube *src:       pointer to source cube (copy)
+ */
 void copy_cube(cube *dest, cube *src) {
     for(int i = 0; i < NUM_CORNERS; i++) {
         dest->points[i] = src->points[i];
@@ -587,6 +627,25 @@ void copy_cube(cube *dest, cube *src) {
 
 }
 
+/*
+ *  Function:    generateCubes
+ *  --------------------------
+ *  given the number of cubes, magnitude, and camera distance, this function generates
+ *      the correct corner coordinates for each cube, finds the active planes (i.e.
+ *      corner cube has 3 active ones, edges have 2, and faces have 1). Lastly, it
+ *      sorts the cubes based on the average z coordinates of the corners so that it
+ *      is painted in the right order.
+ *
+ *  Input params:
+ *      struct cube* cubes:     array of cubes that the generated cubes will be stored in
+ *      int num_cubes:          number of cubes in the Rubik's Cube
+ *      float magnitude:        how long the dimensions of each cube is
+ *      float camera_distance:  how far away the camera is from the cube
+ *
+ *  Return:
+ *      Returns a translated array of cubes that takes into account the orientation and
+ *          distance the cube with respect to the camera.
+ */
 cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float magnitude, float camera_distance,
                     uint32_t *colors, int angle_percent, int type, int select, int move_in_cube) {
     int i, j, k;
@@ -749,6 +808,22 @@ cube *generateCubes(cube *cubes, cube *translated_cubes, int num_cubes, float ma
     return translated_cubes;
 }
 
+/*
+ *  Function:   convert_3D_to_2D
+ *  ----------------------------
+ *  Given the dimensions of the canvas and the set of 3D points, relative to the camera,
+ *      it converts the 3D coordinates and places its equivalent 2D points into the canvas
+ *      array.
+ *
+ *  Input params:
+ *      struct Point_2D* point2D:   pointer to store the converted 2D points
+ *      int width:                  width of canvas
+ *      int height:                 height of canvas
+ *      struct Point_3D* points:    pointer to 3D points to be converted
+ *      int num_corners:            number of corners
+ *      struct Point_3D camera:
+ *
+ */
 void convert_3D_to_2D(Point_2D *point2D, int width, int height, Point_3D *points, Point_3D camera) {
     for(int i = 0; i < NUM_CORNERS; i++) {
         Point_3D curr = points[i];
@@ -770,6 +845,19 @@ void convert_3D_to_2D(Point_2D *point2D, int width, int height, Point_3D *points
     }
 }
 
+/*
+ *  Function:   draw_planes
+ *  -----------------------
+ *  Given an array of planes, it will draw the planes (via 2 triangles) on the canvas 
+ *      in the correct order of back to front by sorting the planes by its z value.
+ *
+ *  Input params:
+ *      uint32_t *canvas:       array of pixels on screen
+ *      int width:              width of canvas
+ *      int height:             height of canvas
+ *      struct plane *p:        array of planes to be drawn
+ *      int count:              number of planes (size of struct plane *p)
+ */
 void draw_planes(uint32_t *canvas, int width, int height, plane *p, int count) {
     int i, j;
 
@@ -1201,18 +1289,6 @@ void change_center(cube *cubes, const int *cube_order) {
 
         rotate_self(cubes, 3, corner_anchors_z, edge_anchors_z, increment_z, !reverse);
         rotate_self(cubes, 5, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-//        compute_hidden(cubes, moving_in);
-
-//        if (Y_AXIS != last_move_in_axis) {
-//            if(last_move_in_axis == X_AXIS) {
-//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-//            } else if(last_move_in_axis == Z_AXIS) {
-//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-//            }
-//            last_move_in_axis = Y_AXIS;
-//        }
     }
 
     if(moving_in == 2 || moving_in == 4) {
@@ -1227,18 +1303,6 @@ void change_center(cube *cubes, const int *cube_order) {
 
         rotate_self(cubes, 3, corner_anchors_y, edge_anchors_y, increment_y, !reverse);
         rotate_self(cubes, 5, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-//        compute_hidden(cubes, moving_in);
-
-//        if (Z_AXIS != last_move_in_axis) {
-//            if(last_move_in_axis == X_AXIS) {
-//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-//            } else if(last_move_in_axis == Y_AXIS) {
-//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-//                rotate_self(cubes, 7, corner_anchors_x, edge_anchors_x, increment_x, reverse);
-//            }
-//            last_move_in_axis = Z_AXIS;
-//        }
     }
 
     if(moving_in == 3 || moving_in == 5) {
@@ -1254,18 +1318,6 @@ void change_center(cube *cubes, const int *cube_order) {
 
         rotate_self(cubes, 2, corner_anchors_y, edge_anchors_y, increment_y, reverse);
         rotate_self(cubes, 4, corner_anchors_y, edge_anchors_y, increment_y, !reverse);
-
-//        compute_hidden(cubes, moving_in);
-//        if (X_AXIS != last_move_in_axis) {
-//            if(last_move_in_axis == Y_AXIS) {
-//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-//                rotate_self(cubes, 7, corner_anchors_z, edge_anchors_z, increment_z, reverse);
-//            } else if(last_move_in_axis == Z_AXIS) {
-//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-//                rotate_self(cubes, 7, corner_anchors_y, edge_anchors_y, increment_y, reverse);
-//            }
-//            last_move_in_axis = X_AXIS;
-//        }
     }
 
     int i;
@@ -1305,14 +1357,6 @@ void change_center(cube *cubes, const int *cube_order) {
 }
 
 void rotate_sandwich(cube *cubes, int bread, int anchor_1[8], int anchor_2[8], int reversed) {
-
-    // hard code for 1 6 y-axis first!
-//
-//    int anchor_1[4] = {1 * CUBES + 6, 1 * CUBES + 8, 1 * CUBES + 26, 1 * CUBES + 24};
-//    int anchor_2[4] = {1 * CUBES + 7, 1 * CUBES + 17, 1 * CUBES + 25, 1 * CUBES + 15};
-
-    // corner for anchor 1
-
     if(reversed) {
         flip(anchor_1);
         flip(&anchor_1[4]);
@@ -1346,18 +1390,11 @@ void rotate_sandwich(cube *cubes, int bread, int anchor_1[8], int anchor_2[8], i
     move_color(&cubes[anchor_2[5]], &cubes[anchor_2[6]]);
     move_color(&cubes[anchor_2[6]], &cubes[anchor_2[7]]);
     move_color(&cubes[anchor_2[7]], &temp_cube);
-
-
-
 }
 
 void rotate_edge(cube *cubes, int select, const int anchor_a[4], const int anchor_b[4]) {
-
-    // swap 1 and 6 (opposites)
-
+    
     int i, j;
-
-
     cube temp_cube;
 
     for(i=0; i < DIMENSION; i++) {
@@ -1369,20 +1406,6 @@ void rotate_edge(cube *cubes, int select, const int anchor_a[4], const int ancho
     }
 
 }
-
-//int **get_anchors(int select) {
-//    switch(select) {
-//        case 4:
-//            {}
-//            int anchor_1_x[4] = {1 * CUBES + 8, 1 * CUBES + 7, 1 * CUBES + 6, 9};
-//            int anchor_4_x[4] = {4 * CUBES + 2, 4 * CUBES + 5, 4 * CUBES + 8, 9};
-//            int anchor_6_x[4] = {6 * CUBES + 0, 6 * CUBES + 1, 6 * CUBES + 2, 9};
-//            int anchor_2_x[4] = {2 * CUBES + 6, 2 * CUBES + 3, 2 * CUBES + 0, 9};
-//            int *anchors_x[7] = {NULL, anchor_1_x, anchor_2_x, NULL, anchor_4_x, NULL, anchor_6_x};
-//
-//            break;
-//    }
-//}
 
 void rotate_center_piece(cube *cubes, int select) {
     int order;
